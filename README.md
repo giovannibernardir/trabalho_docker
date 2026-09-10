@@ -87,5 +87,5 @@ O arquivo `docker-compose.yml` define dois serviços, um volume e uma rede:
 
 ## 6. Autores
 
-- [TODO: nome completo do integrante 1]
 - [Giovanni Bernardi Rodrigues RA:250394]
+- [James Soares Silva RA:250380]
