@@ -1,16 +1,46 @@
+
 services:
+
   web:
-    build: .  # Aqui nós mudamos de "image:" para "build: ."
-    container_name: brawl_stars_php
+    build: . # Constrói a imagem a partir do Dockerfile presente nesta pasta, em vez de baixar uma imagem pronta
+    container_name: app_php # Define um nome fixo para o container da aplicação, facilitando identificação e comandos manuais
     ports:
-      - "8080:80"
+      - "8080:80" # Mapeia a porta 80 do container (onde o Apache escuta) para a porta 8080 da máquina host
+    environment: # Variáveis de ambiente lidas pelo código PHP para montar a conexão com o banco
+      DB_HOST: db # Endereço do banco de dados: usa o nome do serviço "db", resolvido automaticamente pela rede interna do Docker
+      DB_USER: root # Usuário utilizado para autenticar no banco de dados
+      DB_PASSWORD: root # Senha do usuário do banco de dados
+      DB_NAME: brawldex # Nome do banco de dados que a aplicação deve utilizar
     volumes:
-      - ./:/var/www/html/
+      - ./:/var/www/html/ # Sincroniza a pasta do projeto no host com a pasta servida pelo Apache dentro do container, refletindo alterações no código em tempo real
+    depends_on:
+      - db # Garante que o container "db" seja iniciado antes do container "web" tentar se conectar a ele
+    networks:
+      - app-network # Conecta este container à rede personalizada, permitindo que ele enxergue o serviço "db" pelo nome
+
+  # Serviço do banco de dados
   db:
-    image: mysql:8.0
-    container_name: brawl_stars_db
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: brawldex
+    image: mysql:8.0 # Usa a imagem oficial do MySQL, versão 8.0, publicada no Docker Hub
+    container_name: app_db # Define um nome fixo para o container do banco de dados
+    environment: # Variáveis de ambiente exigidas pela imagem oficial do MySQL para configurar o banco na primeira execução
+      MYSQL_ROOT_PASSWORD: root # Define a senha do usuário root do MySQL (deve bater com DB_PASSWORD do serviço "web")
+      MYSQL_DATABASE: brawldex # Cria automaticamente um banco de dados com este nome assim que o container sobe pela primeira vez
     ports:
-      - "3307:3306"
+      - "3307:3306" # Mapeia a porta 3306 do container (MySQL) para a porta 3307 do host, útil para acessar o banco com um cliente externo (ex.: DBeaver, MySQL Workbench)
+    volumes:
+      - db_data:/var/lib/mysql # Usa o volume nomeado "db_data" para persistir os arquivos do banco fora do container, evitando perda de dados ao recriar ou reiniciar os containers
+    networks:
+      - app-network # Conecta este container à mesma rede personalizada usada pelo serviço "web"
+
+
+# Volumes nomeados usados pelos serviços acima
+
+volumes:
+  db_data: # Volume gerenciado pelo próprio Docker; guarda os dados do MySQL de forma persistente
+
+
+# Redes personalizadas usadas pelos serviços acima
+
+networks:
+  app-network: # Rede interna criada especificamente para este projeto
+    driver: bridge # Tipo bridge: permite que "web" e "db" se comuniquem entre si usando o nome do serviço como endereço
